@@ -1,0 +1,6 @@
+{
+    "prompt_user": "Usuário: ",
+    "prompt_pass": "Senha: ",
+    "auth_success": "Acesso concedido.",
+    "auth_failure": "Falha de autenticação."
+}
