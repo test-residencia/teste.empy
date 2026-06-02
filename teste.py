@@ -3,7 +3,7 @@ import os
 import json
 import logging
 import hmac
-import secrets
+import sys
 
 logging.basicConfig(
     level=logging.INFO,
@@ -13,7 +13,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def carregar_mensagens() -> dict:
-    """Externalização de strings (Resolve o aviso de i18n)."""
     try:
         with open("messages.json", "r", encoding="utf-8") as file:
             return json.load(file)
@@ -27,16 +26,17 @@ def carregar_mensagens() -> dict:
 
 def carregar_credenciais() -> tuple:
     """
-    Carrega as variáveis de forma fail-safe.
-    Se não existirem, cria hashes aleatórios de 64 caracteres.
-    Isso impede o vazamento de estado (o app roda, mas bloqueia todo mundo).
+    CORREÇÃO: Valida explicitamente a existência das variáveis para evitar 
+    o uso de fallbacks em produção, mas falha com uma assinatura genérica 
+    para não expor a infraestrutura.
     """
-    fallback_seguro_user = secrets.token_hex(32)
-    fallback_seguro_pass = secrets.token_hex(32)
-    
-    user = os.getenv("APP_USER", fallback_seguro_user)
-    pwd = os.getenv("APP_PASS", fallback_seguro_pass)
-    
+    user = os.getenv("APP_USER")
+    pwd = os.getenv("APP_PASS")
+
+    if not user or not pwd:
+        logger.critical("Falha catastrófica: Inicialização do componente principal abortada.")
+        sys.exit(1)
+        
     return user, pwd
 
 def executar_login():
@@ -47,7 +47,6 @@ def executar_login():
     while tentativas > 0:
         usuario_digitado = input(msgs["prompt_user"])
         senha_digitada = getpass.getpass(msgs["prompt_pass"])
-
         is_user_valid = hmac.compare_digest(usuario_digitado, USUARIO_CORRETO)
         is_pass_valid = hmac.compare_digest(senha_digitada, SENHA_CORRETA)
 
