@@ -1,28 +1,48 @@
 import getpass
 import os
 import sys
+import logging
+import hmac
 
-USUARIO_CORRETO = os.environ.get("APP_USER")
-SENHA_CORRETA = os.environ.get("APP_PASS")
+logging.basicConfig(level=logging.ERROR, format='[%(levelname)s] %(message)s')
 
-if not USUARIO_CORRETO or not SENHA_CORRETA:
-    print("\n[ERRO] Erro interno do servidor. Inicialização abortada.")
-    sys.exit(1)
+MESSAGES = {
+    "prompt_user": "Usuário: ",
+    "prompt_pass": "Senha: ",
+    "auth_success": "Acesso concedido.",
+    "auth_failure": "Falha de autenticação ou acesso bloqueado.",
+    "sys_error": "Erro interno do servidor."
+}
 
-tentativas_restantes = 3
+def carregar_credenciais():
+    """Tenta carregar as credenciais de forma estrita."""
+    try:
+        user = os.environ["APP_USER"]
+        pwd = os.environ["APP_PASS"]
+        return user, pwd
+    except KeyError:
+        logging.error(MESSAGES["sys_error"])
+        sys.exit(1)
 
-print("--- SISTEMA DE AUTENTICAÇÃO ---")
+def executar_login():
+    USUARIO_CORRETO, SENHA_CORRETA = carregar_credenciais()
+    tentativas_restantes = 3
 
-while tentativas_restantes > 0:
-    usuario_digitado = input("Usuário: ")
-    senha_digitada = getpass.getpass("Senha: ")
+    while tentativas_restantes > 0:
+        usuario_digitado = input(MESSAGES["prompt_user"])
+        senha_digitada = getpass.getpass(MESSAGES["prompt_pass"])
 
-    if usuario_digitado == USUARIO_CORRETO and senha_digitada == SENHA_CORRETA:
-        print("\n[SUCESSO] Acesso concedido.")
-        break
-    else:
-        tentativas_restantes -= 1
-        print("\n[ERRO] Falha na autenticação.")
+        is_user_valid = hmac.compare_digest(usuario_digitado, USUARIO_CORRETO)
+        is_pass_valid = hmac.compare_digest(senha_digitada, SENHA_CORRETA)
 
-if tentativas_restantes == 0:
-    print("\n[BLOQUEADO] Acesso negado.")
+        if is_user_valid and is_pass_valid:
+            print(f"\n[SUCESSO] {MESSAGES['auth_success']}")
+            return
+        else:
+            tentativas_restantes -= 1
+            print(f"\n[ERRO] {MESSAGES['auth_failure']}")
+
+    print(f"\n[ERRO] {MESSAGES['auth_failure']}")
+
+if __name__ == "__main__":
+    executar_login()
