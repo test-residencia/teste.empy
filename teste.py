@@ -24,14 +24,26 @@ def carregar_mensagens() -> dict:
             "auth_failure": "Failure"
         }
 
+def validar_complexidade_senha(senha: str) -> bool:
+ 
+    if len(senha) < 8:
+        return False
+    
+    tem_maiuscula = any(c.isupper() for c in senha)
+    tem_minuscula = any(c.islower() for c in senha)
+    tem_digito = any(c.isdigit() for c in senha)
+    tem_especial = any(not c.isalnum() for c in senha)
+    
+    return tem_maiuscula and tem_minuscula and tem_digito and tem_especial
+
 def executar_login():
     msgs = carregar_mensagens()
-    
-    cred_user = os.getenv("APP_USER", "")
-    cred_pass = os.getenv("APP_PASS", "")
+ 
+    cred_user = os.getenv("APP_USER", "").strip()
+    cred_pass = os.getenv("APP_PASS", "").strip()
 
-    if not cred_user or not cred_pass or len(cred_pass) < 8:
-        logger.critical("Erro de configuração: Variáveis de segurança inválidas ou ausentes.")
+    if not cred_user or not cred_pass or not validar_complexidade_senha(cred_pass):
+        logger.critical("Erro de configuração: Credenciais ausentes ou fora dos padrões de complexidade corporativos.")
         sys.exit(1)
 
     tentativas = 3
@@ -44,7 +56,7 @@ def executar_login():
         is_pass_valid = hmac.compare_digest(senha_digitada, cred_pass)
 
         if is_user_valid and is_pass_valid:
-            logger.info(f"Auditoria: Login bem-sucedido para '{usuario_digitado}'.")
+            logger.info("Auditoria: Login efetuado com sucesso.")
             return
         else:
             tentativas -= 1
